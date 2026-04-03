@@ -2,8 +2,8 @@
   "name": "amr-pp",
   "private": true,
   "scripts": {
-    "prebuild": "node ./scripts/check-public-url.mjs",
-    "build": "remix build && node ./scripts/check-public-url.mjs --include-built",
+    "prebuild": "node ./scripts/sync-app-url.mjs && node ./scripts/check-public-url.mjs",
+    "build": "remix build && node ./scripts/check-public-url.mjs",
     "predev": "prisma generate && node ./scripts/setup-local-db.mjs",
     "dev": "shopify app dev",
     "dev:clean": "shopify app dev clean",

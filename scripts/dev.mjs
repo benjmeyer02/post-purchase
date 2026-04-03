@@ -11,6 +11,10 @@ applyLocalDatabaseDefaults();
 const resolution = resolvePublicAppUrl();
 const appUrl = getRequiredPublicAppUrl("dev web startup");
 
+if (!process.env.PUBLIC_APP_URL) {
+  process.env.PUBLIC_APP_URL = appUrl;
+}
+
 process.env.SHOPIFY_APP_URL = appUrl;
 process.env.EFFECTIVE_PUBLIC_APP_URL = appUrl;
 process.env.EFFECTIVE_PUBLIC_APP_URL_SOURCE = resolution.source || "";

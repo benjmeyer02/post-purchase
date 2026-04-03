@@ -1,6 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-import { getPublicAppUrlSyncState, resolvePublicAppUrl } from "./config.server";
+import {
+  getCommittedPublicAppUrlCandidate,
+  getPublicAppUrlSyncState,
+  resolvePublicAppUrl,
+} from "./config.server";
 
 const MANIFEST_PATH = path.join(
   process.cwd(),
@@ -180,6 +184,7 @@ export async function getPostPurchaseDiagnostics({ admin }) {
   const selectionStatus = await getPostPurchaseSelectionStatus(admin);
   const runtimeState = getRuntimeState();
   const publicAppUrl = resolvePublicAppUrl();
+  const committedConfig = getCommittedPublicAppUrlCandidate();
   const build = getExtensionBuildInfo(publicAppUrl.url);
   const placeholderScan = getPlaceholderScan();
 
@@ -195,9 +200,16 @@ export async function getPostPurchaseDiagnostics({ admin }) {
       resolvedAppUrl: publicAppUrl.url,
       source: publicAppUrl.source,
       candidates: publicAppUrl.candidates,
+      committedConfigAppUrl: committedConfig.normalized,
+      committedConfigSourcePath: path.relative(process.cwd(), committedConfig.filePath),
       extensionAppUrl: build.sourceAppUrl,
       extensionMatchesAppUrl:
         Boolean(publicAppUrl.url) && build.sourceAppUrl === publicAppUrl.url,
+      extensionMatchesCommittedConfig:
+        Boolean(committedConfig.normalized) &&
+        build.sourceAppUrl === committedConfig.normalized,
+      resolvedMatchesCommittedConfig:
+        Boolean(publicAppUrl.url) && publicAppUrl.url === committedConfig.normalized,
       placeholderScan,
       lastSyncedAt: build.syncState?.syncedAt || null,
       syncSource: build.syncState?.source || null,

@@ -1,1 +1,1 @@
-export const APP_URL = "https://reverse-centers-imperial-reforms.trycloudflare.com";
+export const APP_URL = "https://post-purchase.benjmeyer02.workers.dev";

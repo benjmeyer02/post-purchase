@@ -2,7 +2,7 @@
 
 client_id = "522fbfa5df57c9ebb520dce112b81361"
 name = "post-purchase"
-application_url = "https://public-app-url-required.invalid"
+application_url = "https://post-purchase.benjmeyer02.workers.dev"
 embedded = true
 
 [build]
@@ -18,4 +18,4 @@ api_version = "2026-07"
 scopes = "read_products,write_products"
 
 [auth]
-redirect_urls = [ "https://public-app-url-required.invalid/api/auth" ]
+redirect_urls = [ "https://post-purchase.benjmeyer02.workers.dev/api/auth" ]

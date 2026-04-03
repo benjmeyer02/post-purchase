@@ -56,6 +56,7 @@ const errors = [];
 
 if (
   resolution.source !== "PUBLIC_APP_URL" &&
+  resolution.source !== "SHOPIFY_APP_CONFIG" &&
   resolution.source !== "SHOPIFY_APP_URL" &&
   resolution.source !== "HOST"
 ) {

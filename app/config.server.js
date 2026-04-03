@@ -9,6 +9,7 @@ const PUBLIC_URL_SYNC_STATE_PATH = path.join(
   ".shopify",
   "public-url-sync.json"
 );
+const SHOPIFY_APP_CONFIG_PATH = path.join(process.cwd(), "shopify.app.toml");
 const PLACEHOLDER_DATABASE_TOKENS = [
   "HOST",
   "REAL_HOST",
@@ -19,13 +20,14 @@ const PLACEHOLDER_DATABASE_TOKENS = [
   "DBNAME",
   "REAL_DB",
 ];
-const PUBLIC_APP_URL_ENV_PRIORITY = [
-  "PUBLIC_APP_URL",
-  "SHOPIFY_APP_URL",
-  "HOST",
-];
 const FORBIDDEN_PUBLIC_APP_HOSTS = new Set(["example.com"]);
 const FORBIDDEN_PUBLIC_APP_SUFFIXES = [".invalid"];
+const PUBLIC_APP_URL_SOURCES = {
+  PUBLIC_APP_URL: "PUBLIC_APP_URL",
+  SHOPIFY_APP_CONFIG: "SHOPIFY_APP_CONFIG",
+  SHOPIFY_APP_URL: "SHOPIFY_APP_URL",
+  HOST: "HOST",
+};
 
 function getForbiddenPublicUrlReason(url) {
   if (FORBIDDEN_PUBLIC_APP_HOSTS.has(url.hostname)) {
@@ -65,19 +67,64 @@ export function normalizePublicAppUrl(value) {
   }
 }
 
-export function resolvePublicAppUrl(env = process.env) {
-  const candidates = PUBLIC_APP_URL_ENV_PRIORITY.map((key) => {
-    const raw = String(env[key] || "").trim();
-    const { normalized, reason } = normalizePublicAppUrl(raw);
+function createPublicAppUrlCandidate(key, raw, metadata = {}) {
+  const value = String(raw || "").trim();
+  const { normalized, reason } = normalizePublicAppUrl(value);
+
+  return {
+    key,
+    raw: value,
+    normalized,
+    reason,
+    selected: false,
+    ...metadata,
+  };
+}
+
+function getCommittedShopifyAppConfig() {
+  try {
+    const contents = fs.readFileSync(SHOPIFY_APP_CONFIG_PATH, "utf8");
+    const applicationUrlMatch = contents.match(
+      /^\s*application_url\s*=\s*"([^"]+)"/m
+    );
 
     return {
-      key,
-      raw,
-      normalized,
-      reason,
-      selected: false,
+      filePath: SHOPIFY_APP_CONFIG_PATH,
+      applicationUrl: applicationUrlMatch?.[1] || "",
     };
-  });
+  } catch {
+    return {
+      filePath: SHOPIFY_APP_CONFIG_PATH,
+      applicationUrl: "",
+    };
+  }
+}
+
+export function getCommittedPublicAppUrlCandidate() {
+  const config = getCommittedShopifyAppConfig();
+
+  return createPublicAppUrlCandidate(
+    PUBLIC_APP_URL_SOURCES.SHOPIFY_APP_CONFIG,
+    config.applicationUrl,
+    {
+      filePath: config.filePath,
+    }
+  );
+}
+
+export function resolvePublicAppUrl(env = process.env) {
+  const candidates = [
+    createPublicAppUrlCandidate(
+      PUBLIC_APP_URL_SOURCES.PUBLIC_APP_URL,
+      env.PUBLIC_APP_URL
+    ),
+    getCommittedPublicAppUrlCandidate(),
+    createPublicAppUrlCandidate(
+      PUBLIC_APP_URL_SOURCES.SHOPIFY_APP_URL,
+      env.SHOPIFY_APP_URL
+    ),
+    createPublicAppUrlCandidate(PUBLIC_APP_URL_SOURCES.HOST, env.HOST),
+  ];
 
   const selectedCandidate = candidates.find(
     (candidate) => candidate.normalized
@@ -105,12 +152,15 @@ function buildPublicAppUrlErrorMessage(context, resolution) {
       const status = candidate.normalized
         ? `valid -> ${candidate.normalized}`
         : candidate.reason || "invalid";
+      const sourceDetail = candidate.filePath
+        ? ` from ${path.relative(process.cwd(), candidate.filePath)}`
+        : "";
 
-      return `${candidate.key}=${displayValue} [${status}]`;
+      return `${candidate.key}=${displayValue}${sourceDetail} [${status}]`;
     })
     .join("; ");
 
-  return `Missing valid public app URL for ${context}. Set PUBLIC_APP_URL to a stable hostname or let Shopify CLI provide SHOPIFY_APP_URL during \`shopify app dev\`. Placeholder hosts like example.com or *.invalid are rejected. Checked: ${candidateSummary}`;
+  return `Missing valid public app URL for ${context}. Set PUBLIC_APP_URL to a stable hostname, commit a valid application_url in shopify.app.toml for deploys, or let Shopify CLI provide SHOPIFY_APP_URL during \`shopify app dev\`. Placeholder hosts like example.com or *.invalid are rejected. Checked: ${candidateSummary}`;
 }
 
 export function getRequiredPublicAppUrl(
