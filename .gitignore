@@ -1,6 +1,16 @@
 .env
+.DS_Store
+node_modules/
+build/
+public/build/
+.cache/
+.react-router/
+.wrangler/
+.shopify/
+app/generated/
 prisma/dev.sqlite
 prisma/dev.sqlite-journal
 prisma/dev.sqlite-shm
 prisma/dev.sqlite-wal
 prisma/.local-db-state.json
+extensions/*/dist/

@@ -1,28 +1,8 @@
-import { PrismaClient } from "@prisma/client";
-import {
-  applyLocalDatabaseDefaults,
-  assertLocalDatabaseState,
-} from "./config.server";
+import { env } from "cloudflare:workers";
+import { PrismaD1 } from "@prisma/adapter-d1";
+import { PrismaClient } from "./generated/prisma/client";
 
-const database = applyLocalDatabaseDefaults();
-const bootstrapCheck = assertLocalDatabaseState();
-
-if (database.mode === "sqlite") {
-  console.log(`Resolved runtime DB path: ${database.resolvedPath}`);
-  console.log(
-    `Resolved bootstrap DB path: ${bootstrapCheck.bootstrapState?.resolvedPath}`
-  );
-}
-
-let db;
-
-if (process.env.NODE_ENV !== "production") {
-  if (!global.__db) {
-    global.__db = new PrismaClient();
-  }
-  db = global.__db;
-} else {
-  db = new PrismaClient();
-}
+const adapter = new PrismaD1(env.post_purchase_db);
+const db = new PrismaClient({ adapter });
 
 export default db;

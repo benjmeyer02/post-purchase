@@ -1,53 +1,36 @@
-import { PassThrough } from "stream";
-import { renderToPipeableStream } from "react-dom/server";
-import { RemixServer } from "@remix-run/react";
-import { createReadableStreamFromReadable } from "@remix-run/node";
+import { renderToReadableStream } from "react-dom/server";
+import { ServerRouter } from "react-router";
 import { isbot } from "isbot";
 import { addDocumentResponseHeaders } from "./shopify.server";
 
-const ABORT_DELAY = 5000;
+export const streamTimeout = 5000;
 
 export default async function handleRequest(
   request,
   responseStatusCode,
   responseHeaders,
-  remixContext
+  reactRouterContext
 ) {
   addDocumentResponseHeaders(request, responseHeaders);
-  const userAgent = request.headers.get("user-agent");
-  const callbackName = isbot(userAgent ?? "") ? "onAllReady" : "onShellReady";
+  const userAgent = request.headers.get("user-agent") || "";
+  const body = await renderToReadableStream(
+    <ServerRouter context={reactRouterContext} url={request.url} />,
+    {
+      onError(error) {
+        responseStatusCode = 500;
+        console.error(error);
+      },
+    }
+  );
 
-  return new Promise((resolve, reject) => {
-    const { pipe, abort } = renderToPipeableStream(
-      <RemixServer
-        context={remixContext}
-        url={request.url}
-        abortDelay={ABORT_DELAY}
-      />,
-      {
-        [callbackName]: () => {
-          const body = new PassThrough();
-          const stream = createReadableStreamFromReadable(body);
+  if (isbot(userAgent)) {
+    await body.allReady;
+  }
 
-          responseHeaders.set("Content-Type", "text/html");
-          resolve(
-            new Response(stream, {
-              headers: responseHeaders,
-              status: responseStatusCode,
-            })
-          );
-          pipe(body);
-        },
-        onShellError(error) {
-          reject(error);
-        },
-        onError(error) {
-          responseStatusCode = 500;
-          console.error(error);
-        },
-      }
-    );
+  responseHeaders.set("Content-Type", "text/html");
 
-    setTimeout(abort, ABORT_DELAY);
+  return new Response(body, {
+    status: responseStatusCode,
+    headers: responseHeaders,
   });
 }

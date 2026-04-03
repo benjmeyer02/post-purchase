@@ -1,15 +1,14 @@
-import { createRequire } from "node:module";
-import { loadLocalEnv, applyLocalDatabaseDefaults } from "./load-local-env.mjs";
+import { spawn } from "node:child_process";
+import { loadLocalEnv } from "./load-local-env.mjs";
 import {
   getRequiredPublicAppUrl,
   resolvePublicAppUrl,
 } from "../app/config.server.js";
 
 loadLocalEnv();
-applyLocalDatabaseDefaults();
 
 const resolution = resolvePublicAppUrl();
-const appUrl = getRequiredPublicAppUrl("dev web startup");
+const appUrl = getRequiredPublicAppUrl("dev startup");
 
 if (!process.env.PUBLIC_APP_URL) {
   process.env.PUBLIC_APP_URL = appUrl;
@@ -25,28 +24,17 @@ console.log(
 
 await import("./sync-app-url.mjs");
 
-const require = createRequire(import.meta.url);
-const { createRequestHandler } = require("@remix-run/express");
-const express = require("express");
+const vite = spawn("vite", ["dev"], {
+  stdio: "inherit",
+  shell: true,
+  env: process.env,
+});
 
-const app = express();
-const BUILD_PATH = process.env.BUILD_PATH || "./build/index.js";
-const BUILD_DIR = BUILD_PATH.replace(/\/index\.js$/, "");
+vite.on("exit", (code, signal) => {
+  if (signal) {
+    process.kill(process.pid, signal);
+    return;
+  }
 
-app.use(
-  "/build",
-  express.static(`${BUILD_DIR}/client/build`, { immutable: true, maxAge: "1y" })
-);
-app.use(express.static("public", { maxAge: "1h" }));
-app.use(
-  createRequestHandler({
-    build: await import(BUILD_PATH),
-    mode: process.env.NODE_ENV,
-  })
-);
-
-const port = Number.parseInt(process.env.PORT || "3000", 10);
-
-app.listen(port, () => {
-  console.log(`app listening on ${port}`);
+  process.exit(code ?? 0);
 });

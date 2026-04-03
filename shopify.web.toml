@@ -1,6 +1,7 @@
-name = "remix"
+name = "React Router"
 roles = ["frontend", "backend"]
 webhooks_path = "/webhooks"
 
 [commands]
-dev = "npm run dev:web"
+predev = "npm run db:generate"
+dev = "npm run dev"

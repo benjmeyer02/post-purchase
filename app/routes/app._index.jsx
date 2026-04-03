@@ -1,9 +1,5 @@
-import fs from "node:fs";
-import path from "node:path";
-import toml from "toml";
 import { randomUUID } from "node:crypto";
-import { json } from "@remix-run/node";
-import { useFetcher, useLoaderData, useRevalidator } from "@remix-run/react";
+import { useFetcher, useLoaderData, useRevalidator } from "react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   Badge,
@@ -25,35 +21,14 @@ import {
   Text,
   TextField,
 } from "@shopify/polaris";
-import {
-  assertLocalDatabaseState,
-  resolvePublicAppUrl,
-  redactDatabaseUrl,
-  getResolvedDatabaseLocation,
-} from "../config.server";
+import { resolvePublicAppUrl } from "../config.server";
 import { loadCatalog } from "../catalog.server";
 import db from "../db.server";
 import { getPostPurchaseDiagnostics } from "../post-purchase-debug.server";
 import { authenticate } from "../shopify.server";
 
 function readConfigFiles() {
-  const root = process.cwd();
-  const configFiles = fs
-    .readdirSync(root)
-    .filter((file) => /^shopify\.app.*\.toml$/.test(file))
-    .sort();
-
-  return configFiles.map((file) => {
-    const contents = fs.readFileSync(path.join(root, file), "utf8");
-    const parsed = toml.parse(contents);
-
-    return {
-      file,
-      applicationUrl: parsed.application_url || null,
-      devStoreUrl: parsed.build?.dev_store_url || null,
-      webhookApiVersion: parsed.webhooks?.api_version || null,
-    };
-  });
+  return [];
 }
 
 function offerToJson(offer) {
@@ -174,9 +149,6 @@ function validateOfferInput(formData, catalog) {
 export const loader = async ({ request }) => {
   const { admin, session } = await authenticate.admin(request);
   const publicAppUrl = resolvePublicAppUrl();
-
-  const database = getResolvedDatabaseLocation();
-  const bootstrap = assertLocalDatabaseState();
   const [catalog, offers, sessions] = await Promise.all([
     loadCatalog(admin),
     db.offer.findMany({
@@ -205,7 +177,7 @@ export const loader = async ({ request }) => {
   );
   const diagnostics = await getPostPurchaseDiagnostics({ admin });
 
-  return json({
+  return {
     shop: session.shop,
     offers: offers.map(offerToJson),
     productOptions: catalog.productOptions,
@@ -216,20 +188,20 @@ export const loader = async ({ request }) => {
     publicAppUrlEnv: process.env.PUBLIC_APP_URL || "",
     shopifyAppUrlEnv: process.env.SHOPIFY_APP_URL || "",
     extensionAppUrl,
-    databaseMode: database.mode,
-    databaseUrl: redactDatabaseUrl(database.url),
-    resolvedDatabasePath: database.resolvedPath || "",
-    usingDatabaseFallback: database.usingFallback,
-    databaseReason: database.reason,
-    sessionTableExists: Boolean(bootstrap.bootstrapState?.sessionTableExists),
-    offerTableExists: Boolean(bootstrap.bootstrapState?.offerTableExists),
-    bootstrapDatabasePath: bootstrap.bootstrapState?.resolvedPath || "",
+    databaseMode: "d1",
+    databaseUrl: "Cloudflare D1 binding: post_purchase_db",
+    resolvedDatabasePath: "",
+    usingDatabaseFallback: false,
+    databaseReason: "cloudflare-d1",
+    sessionTableExists: sessionStorageReady,
+    offerTableExists: sessionStorageReady,
+    bootstrapDatabasePath: "",
     sessionStorageReady,
     sessionStorageError,
     configFiles: readConfigFiles(),
     shops: sessions.map((current) => current.shop),
     diagnostics,
-  });
+  };
 };
 
 export const action = async ({ request }) => {
@@ -238,7 +210,7 @@ export const action = async ({ request }) => {
   const intent = String(formData.get("intent") || "");
 
   if (!intent) {
-    return json(
+    return Response.json(
       { ok: false, message: "Missing action intent." },
       { status: 400 }
     );
@@ -247,14 +219,17 @@ export const action = async ({ request }) => {
   if (intent === "delete") {
     const id = String(formData.get("id") || "");
     if (!id) {
-      return json({ ok: false, message: "Missing offer id." }, { status: 400 });
+      return Response.json(
+        { ok: false, message: "Missing offer id." },
+        { status: 400 }
+      );
     }
 
     await db.offer.deleteMany({
       where: { id, shop: session.shop },
     });
 
-    return json({ ok: true, message: "Offer deleted." });
+    return { ok: true, message: "Offer deleted." };
   }
 
   if (intent === "toggle") {
@@ -266,21 +241,24 @@ export const action = async ({ request }) => {
       data: { isActive },
     });
 
-    return json({
+    return {
       ok: true,
       message: isActive ? "Offer enabled." : "Offer disabled.",
-    });
+    };
   }
 
   if (intent !== "save") {
-    return json({ ok: false, message: "Unsupported action." }, { status: 400 });
+    return Response.json(
+      { ok: false, message: "Unsupported action." },
+      { status: 400 }
+    );
   }
 
   const catalog = await loadCatalog(admin);
   const result = validateOfferInput(formData, catalog);
 
   if (result.errors) {
-    return json(
+    return Response.json(
       {
         ok: false,
         message: "Please fix the highlighted fields.",
@@ -304,7 +282,7 @@ export const action = async ({ request }) => {
     },
   });
 
-  return json({ ok: true, message: "Offer saved." });
+  return { ok: true, message: "Offer saved." };
 };
 
 const DEFAULT_FORM_STATE = {

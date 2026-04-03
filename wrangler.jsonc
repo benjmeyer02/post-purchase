@@ -1,0 +1,22 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "post-purchase",
+  "main": "./workers/app.ts",
+  "compatibility_date": "2026-04-03",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  },
+  "d1_databases": [
+    {
+      "binding": "post_purchase_db",
+      "database_name": "post-purchase-db",
+      "database_id": "9534ae0d-0372-459c-9d81-b5d15efa28d6"
+    }
+  ],
+  "vars": {
+    "SHOPIFY_APP_URL": "https://post-purchase.benjmeyer02.workers.dev",
+    "PUBLIC_APP_URL": "https://post-purchase.benjmeyer02.workers.dev",
+    "SCOPES": "read_products,write_products"
+  }
+}

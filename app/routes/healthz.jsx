@@ -1,17 +1,11 @@
-import { json } from "@remix-run/node";
 import db from "../db.server";
 import {
-  assertLocalDatabaseState,
   getPublicAppUrl,
   getPublicAppUrlSyncState,
-  getResolvedDatabaseLocation,
-  redactDatabaseUrl,
   resolvePublicAppUrl,
 } from "../config.server";
 
 export const loader = async () => {
-  const database = getResolvedDatabaseLocation();
-  const bootstrap = assertLocalDatabaseState();
   const publicAppUrlResolution = resolvePublicAppUrl();
   let sessionStorageReady = false;
   let sessionStorageError = null;
@@ -24,7 +18,7 @@ export const loader = async () => {
       error instanceof Error ? error.message : "Unknown Prisma error";
   }
 
-  return json(
+  return Response.json(
     {
       publicAppUrl: getPublicAppUrl() || null,
       publicAppUrlSource: publicAppUrlResolution.source || null,
@@ -38,12 +32,12 @@ export const loader = async () => {
         )
       ).APP_URL,
       publicUrlSyncState: getPublicAppUrlSyncState(),
-      databaseMode: database.mode,
-      resolvedDatabaseUrl: redactDatabaseUrl(database.url),
-      resolvedDatabasePath: database.resolvedPath,
-      usingDatabaseFallback: database.usingFallback,
-      sessionTableExists: Boolean(bootstrap.bootstrapState?.sessionTableExists),
-      offerTableExists: Boolean(bootstrap.bootstrapState?.offerTableExists),
+      databaseMode: "d1",
+      resolvedDatabaseUrl: "Cloudflare D1 binding: post_purchase_db",
+      resolvedDatabasePath: null,
+      usingDatabaseFallback: false,
+      sessionTableExists: sessionStorageReady,
+      offerTableExists: sessionStorageReady,
       sessionStorageReady,
       sessionStorageError,
     },

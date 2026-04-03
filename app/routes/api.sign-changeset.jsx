@@ -1,4 +1,3 @@
-import { json } from "@remix-run/node";
 import { v4 as uuidv4 } from "uuid";
 import jwt from "jsonwebtoken";
 
@@ -55,7 +54,7 @@ export const action = async ({ request }) => {
       })}`
     );
     return cors(
-      json(
+      Response.json(
         {
           error: "Missing changeset context",
           debug: {
@@ -87,7 +86,7 @@ export const action = async ({ request }) => {
       })}`
     );
     return cors(
-      json(
+      Response.json(
         {
           error: `No offline session found for ${shop}`,
           debug: {
@@ -122,7 +121,7 @@ export const action = async ({ request }) => {
       })}`
     );
     return cors(
-      json(
+      Response.json(
         {
           error: "Offer not found",
           debug: {
@@ -153,5 +152,5 @@ export const action = async ({ request }) => {
       changesCount: selectedOffer.changes.length,
     })}`
   );
-  return cors(json({ token }));
+  return cors(Response.json({ token }));
 };

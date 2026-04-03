@@ -1,46 +1,24 @@
-import "@shopify/shopify-app-remix/adapters/node";
 import {
+  ApiVersion,
   AppDistribution,
   DeliveryMethod,
   shopifyApp,
-  LATEST_API_VERSION,
-} from "@shopify/shopify-app-remix";
-import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
-import db from "./db.server";
-import {
-  getRequiredPublicAppUrl,
-  resolvePublicAppUrl,
-  getResolvedDatabaseLocation,
-  getScopes,
-} from "./config.server";
+} from "@shopify/shopify-app-react-router/server";
+import { D1SessionStorage } from "./session-storage.server";
+import { getRequiredPublicAppUrl, getScopes } from "./config.server";
 
-const publicAppUrl = resolvePublicAppUrl();
-const appUrl = getRequiredPublicAppUrl("Shopify app initialization");
-const database = getResolvedDatabaseLocation();
-const prismaSessionStorage = new PrismaSessionStorage(db);
 const apiSecretKey =
   process.env.SHOPIFY_API_SECRET || process.env.SHOPIFY_APP_SECRET || "";
-
-prismaSessionStorage.ready
-  .then(() => {
-    console.log("session storage ready: true");
-  })
-  .catch((error) => {
-    console.error("session storage ready: false");
-    console.error(error);
-  });
-
-console.log(`session storage db: ${database.resolvedPath || database.url}`);
-console.log(`public app url: ${appUrl} (${publicAppUrl.source || "unknown"})`);
+const appUrl = getRequiredPublicAppUrl("Shopify app initialization");
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY || "",
   apiSecretKey,
-  apiVersion: LATEST_API_VERSION,
+  apiVersion: ApiVersion.October25,
   scopes: getScopes(),
   appUrl,
   authPathPrefix: "/auth",
-  sessionStorage: prismaSessionStorage,
+  sessionStorage: new D1SessionStorage(),
   distribution: AppDistribution.AppStore,
   webhooks: {
     APP_UNINSTALLED: {
@@ -75,7 +53,7 @@ const shopify = shopifyApp({
 });
 
 export default shopify;
-export const apiVersion = LATEST_API_VERSION;
+export const apiVersion = ApiVersion.October25;
 export const addDocumentResponseHeaders = shopify.addDocumentResponseHeaders;
 export const authenticate = shopify.authenticate;
 export const unauthenticated = shopify.unauthenticated;

@@ -1,4 +1,3 @@
-import { json } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
 import {
   getInitialLineItemsFromSessionToken,
@@ -47,7 +46,7 @@ export const action = async ({ request }) => {
       })}`
     );
     return cors(
-      json(
+      Response.json(
         {
           offers: [],
           debug: {
@@ -78,7 +77,7 @@ export const action = async ({ request }) => {
       })}`
     );
     return cors(
-      json(
+      Response.json(
         {
           offers: [],
           debug: {
@@ -112,5 +111,5 @@ export const action = async ({ request }) => {
     })}`
   );
 
-  return cors(json(result));
+  return cors(Response.json(result));
 };

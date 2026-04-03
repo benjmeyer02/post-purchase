@@ -1,4 +1,3 @@
-import { json } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
 import { getPostPurchaseDiagnostics } from "../post-purchase-debug.server";
 
@@ -7,5 +6,5 @@ export const loader = async ({ request }) => {
 
   const diagnostics = await getPostPurchaseDiagnostics({ admin });
 
-  return json(diagnostics);
+  return diagnostics;
 };

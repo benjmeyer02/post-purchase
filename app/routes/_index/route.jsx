@@ -1,9 +1,6 @@
-import { json, redirect } from "@remix-run/node";
-import { Form, useLoaderData } from "@remix-run/react";
+import { Form, redirect, useLoaderData } from "react-router";
 import { login } from "../../shopify.server";
-import indexStyles from "./style.css";
-
-export const links = () => [{ rel: "stylesheet", href: indexStyles }];
+import "./style.css";
 
 export const loader = async ({ request }) => {
   const url = new URL(request.url);
@@ -12,7 +9,7 @@ export const loader = async ({ request }) => {
     throw redirect(`/app?${url.searchParams.toString()}`);
   }
 
-  return json({ showForm: Boolean(login) });
+  return { showForm: Boolean(login) };
 };
 
 export default function App() {
