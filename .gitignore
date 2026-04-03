@@ -1,0 +1,6 @@
+.env
+prisma/dev.sqlite
+prisma/dev.sqlite-journal
+prisma/dev.sqlite-shm
+prisma/dev.sqlite-wal
+prisma/.local-db-state.json

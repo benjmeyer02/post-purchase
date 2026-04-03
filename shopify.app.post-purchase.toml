@@ -1,0 +1,21 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "522fbfa5df57c9ebb520dce112b81361"
+name = "post-purchase"
+application_url = "https://public-app-url-required.invalid"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = true
+include_config_on_deploy = true
+dev_store_url = "devs-9802.myshopify.com"
+
+[webhooks]
+api_version = "2024-04"
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_products,write_products"
+
+[auth]
+redirect_urls = [ "https://public-app-url-required.invalid/auth/callback" ]

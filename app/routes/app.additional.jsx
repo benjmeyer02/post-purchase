@@ -1,0 +1,7 @@
+import { redirect } from "@remix-run/node";
+
+export const loader = async () => redirect("/app");
+
+export default function AdditionalPage() {
+  return null;
+}
