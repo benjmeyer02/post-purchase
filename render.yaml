@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: post-purchase-app
+    runtime: docker
+    plan: free
+    region: ohio
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    branch: master
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PUBLIC_APP_URL
+        value: https://post-purchase.benjmeyer02.workers.dev
+      - key: SHOPIFY_APP_URL
+        value: https://post-purchase.benjmeyer02.workers.dev
+      - key: SCOPES
+        value: read_products,write_products
+      - key: LOCAL_DB_MODE
+        value: sqlite
+      - key: LOCAL_SQLITE_DATABASE_URL
+        value: file:/var/data/dev.sqlite
+      - key: SHOPIFY_API_KEY
+        sync: false
+      - key: SHOPIFY_API_SECRET
+        sync: false
+      - key: SHOPIFY_APP_SECRET
+        sync: false
+    disk:
+      name: post-purchase-data
+      mountPath: /var/data
+      sizeGB: 1

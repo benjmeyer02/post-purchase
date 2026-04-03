@@ -18,6 +18,8 @@ const publicAppUrl = resolvePublicAppUrl();
 const appUrl = getRequiredPublicAppUrl("Shopify app initialization");
 const database = getResolvedDatabaseLocation();
 const prismaSessionStorage = new PrismaSessionStorage(db);
+const apiSecretKey =
+  process.env.SHOPIFY_API_SECRET || process.env.SHOPIFY_APP_SECRET || "";
 
 prismaSessionStorage.ready
   .then(() => {
@@ -33,7 +35,7 @@ console.log(`public app url: ${appUrl} (${publicAppUrl.source || "unknown"})`);
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY || "",
-  apiSecretKey: process.env.SHOPIFY_API_SECRET || "",
+  apiSecretKey,
   apiVersion: LATEST_API_VERSION,
   scopes: getScopes(),
   appUrl,
