@@ -23,6 +23,7 @@ const PLACEHOLDER_DATABASE_TOKENS = [
 const FORBIDDEN_PUBLIC_APP_HOSTS = new Set(["example.com"]);
 const FORBIDDEN_PUBLIC_APP_SUFFIXES = [".invalid"];
 const PUBLIC_APP_URL_SOURCES = {
+  SHOPIFY_DEV_PREVIEW_URL: "SHOPIFY_DEV_PREVIEW_URL",
   PUBLIC_APP_URL: "PUBLIC_APP_URL",
   SHOPIFY_APP_CONFIG: "SHOPIFY_APP_CONFIG",
   SHOPIFY_APP_URL: "SHOPIFY_APP_URL",
@@ -113,18 +114,50 @@ export function getCommittedPublicAppUrlCandidate() {
 }
 
 export function resolvePublicAppUrl(env = process.env) {
-  const candidates = [
-    createPublicAppUrlCandidate(
-      PUBLIC_APP_URL_SOURCES.PUBLIC_APP_URL,
-      env.PUBLIC_APP_URL
-    ),
-    getCommittedPublicAppUrlCandidate(),
-    createPublicAppUrlCandidate(
-      PUBLIC_APP_URL_SOURCES.SHOPIFY_APP_URL,
-      env.SHOPIFY_APP_URL
-    ),
-    createPublicAppUrlCandidate(PUBLIC_APP_URL_SOURCES.HOST, env.HOST),
-  ];
+  const shopifyDevPreviewCandidate = createPublicAppUrlCandidate(
+    PUBLIC_APP_URL_SOURCES.SHOPIFY_DEV_PREVIEW_URL,
+    env.SHOPIFY_DEV_PREVIEW_URL
+  );
+  const publicAppUrlCandidate = createPublicAppUrlCandidate(
+    PUBLIC_APP_URL_SOURCES.PUBLIC_APP_URL,
+    env.PUBLIC_APP_URL
+  );
+  const committedConfigCandidate = getCommittedPublicAppUrlCandidate();
+  const shopifyAppUrlCandidate = createPublicAppUrlCandidate(
+    PUBLIC_APP_URL_SOURCES.SHOPIFY_APP_URL,
+    env.SHOPIFY_APP_URL
+  );
+  const hostCandidate = createPublicAppUrlCandidate(
+    PUBLIC_APP_URL_SOURCES.HOST,
+    env.HOST
+  );
+  const preferShopifyRuntimeUrl =
+    shopifyAppUrlCandidate.normalized &&
+    shopifyAppUrlCandidate.normalized !== publicAppUrlCandidate.normalized;
+  const preferShopifyDevPreviewUrl =
+    shopifyDevPreviewCandidate.normalized &&
+    shopifyDevPreviewCandidate.normalized !== publicAppUrlCandidate.normalized;
+  const candidates = preferShopifyDevPreviewUrl
+    ? [
+        shopifyDevPreviewCandidate,
+        shopifyAppUrlCandidate,
+        publicAppUrlCandidate,
+        committedConfigCandidate,
+        hostCandidate,
+      ]
+    : preferShopifyRuntimeUrl
+    ? [
+        shopifyAppUrlCandidate,
+        publicAppUrlCandidate,
+        committedConfigCandidate,
+        hostCandidate,
+      ]
+    : [
+        publicAppUrlCandidate,
+        committedConfigCandidate,
+        shopifyAppUrlCandidate,
+        hostCandidate,
+      ];
 
   const selectedCandidate = candidates.find(
     (candidate) => candidate.normalized
@@ -143,6 +176,42 @@ export function resolvePublicAppUrl(env = process.env) {
 
 export function getPublicAppUrl() {
   return resolvePublicAppUrl().url;
+}
+
+export function resolveExtensionAppUrl(env = process.env) {
+  const publicAppUrlCandidate = createPublicAppUrlCandidate(
+    PUBLIC_APP_URL_SOURCES.PUBLIC_APP_URL,
+    env.PUBLIC_APP_URL
+  );
+  const committedConfigCandidate = getCommittedPublicAppUrlCandidate();
+  const shopifyAppUrlCandidate = createPublicAppUrlCandidate(
+    PUBLIC_APP_URL_SOURCES.SHOPIFY_APP_URL,
+    env.SHOPIFY_APP_URL
+  );
+  const hostCandidate = createPublicAppUrlCandidate(
+    PUBLIC_APP_URL_SOURCES.HOST,
+    env.HOST
+  );
+  const candidates = [
+    publicAppUrlCandidate,
+    committedConfigCandidate,
+    shopifyAppUrlCandidate,
+    hostCandidate,
+  ];
+
+  const selectedCandidate = candidates.find(
+    (candidate) => candidate.normalized
+  );
+
+  if (selectedCandidate) {
+    selectedCandidate.selected = true;
+  }
+
+  return {
+    url: selectedCandidate?.normalized || null,
+    source: selectedCandidate?.key || null,
+    candidates,
+  };
 }
 
 function buildPublicAppUrlErrorMessage(context, resolution) {
@@ -168,6 +237,19 @@ export function getRequiredPublicAppUrl(
   env = process.env
 ) {
   const resolution = resolvePublicAppUrl(env);
+
+  if (!resolution.url) {
+    throw new Error(buildPublicAppUrlErrorMessage(context, resolution));
+  }
+
+  return resolution.url;
+}
+
+export function getRequiredExtensionAppUrl(
+  context = "extension runtime",
+  env = process.env
+) {
+  const resolution = resolveExtensionAppUrl(env);
 
   if (!resolution.url) {
     throw new Error(buildPublicAppUrlErrorMessage(context, resolution));

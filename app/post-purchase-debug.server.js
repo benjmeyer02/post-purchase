@@ -21,9 +21,16 @@ const EXTENSION_DIST_PATH = path.join(
 );
 const EXTENSION_APP_URL_PATH = path.join(
   process.cwd(),
+  ".shopify",
+  "generated",
+  "app-url.js"
+);
+const EXTENSION_SOURCE_APP_URL_PATH = path.join(
+  process.cwd(),
   "extensions",
   "my-post-purchase-ui-extension",
   "src",
+  "generated",
   "app-url.js"
 );
 const BUILD_OUTPUT_PATH = path.join(process.cwd(), "build", "index.js");
@@ -31,6 +38,7 @@ const ACTIVE_URL_SCAN_PATHS = [
   path.join(process.cwd(), ".env"),
   path.join(process.cwd(), ".shopify", "public-url-sync.json"),
   EXTENSION_APP_URL_PATH,
+  EXTENSION_SOURCE_APP_URL_PATH,
   EXTENSION_DIST_PATH,
   BUILD_OUTPUT_PATH,
   MANIFEST_PATH,
@@ -134,12 +142,15 @@ function getPlaceholderScan() {
 
 function getExtensionBuildInfo(expectedUrl) {
   const extensionSource = readTextFile(EXTENSION_APP_URL_PATH);
+  const extensionSourceLocal = readTextFile(EXTENSION_SOURCE_APP_URL_PATH);
   const extensionBundle = readTextFile(EXTENSION_DIST_PATH);
   const syncState = getPublicAppUrlSyncState();
   const sourceAppUrl = extractAppUrl(extensionSource);
+  const sourceLocalAppUrl = extractAppUrl(extensionSourceLocal);
 
   return {
     sourceAppUrl,
+    sourceLocalAppUrl,
     bundleExists: Boolean(extensionBundle),
     bundleContainsExpectedUrl: Boolean(
       extensionBundle && expectedUrl && extensionBundle.includes(expectedUrl)

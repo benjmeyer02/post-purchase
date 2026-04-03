@@ -1,19 +1,26 @@
 import fs from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import {
   getPublicUrlSyncStatePath,
-  resolvePublicAppUrl,
-  getRequiredPublicAppUrl,
+  resolveExtensionAppUrl,
+  getRequiredExtensionAppUrl,
 } from "../app/config.server.js";
 
 const cwd = process.cwd();
-const extensionDir = path.join(
+const generatedDir = path.join(cwd, ".shopify", "generated");
+const extensionAppUrlPath = path.join(generatedDir, "app-url.js");
+const extensionSourceGeneratedDir = path.join(
   cwd,
   "extensions",
   "my-post-purchase-ui-extension",
-  "src"
+  "src",
+  "generated"
 );
-const extensionAppUrlPath = path.join(extensionDir, "app-url.js");
+const extensionSourceAppUrlPath = path.join(
+  extensionSourceGeneratedDir,
+  "app-url.js"
+);
 const syncStatePath = getPublicUrlSyncStatePath();
 
 function writeFileIfChanged(filePath, contents) {
@@ -30,26 +37,50 @@ function writeFileIfChanged(filePath, contents) {
   return true;
 }
 
-const resolution = resolvePublicAppUrl();
-const appUrl = getRequiredPublicAppUrl("extension APP_URL sync");
-const syncedAt = new Date().toISOString();
-const appUrlModule = `export const APP_URL = ${JSON.stringify(appUrl)};\n`;
-const syncState =
-  JSON.stringify(
-    {
-      appUrl,
-      source: resolution.source,
-      syncedAt,
-    },
-    null,
-    2
-  ) + "\n";
+export function syncAppUrl() {
+  const resolution = resolveExtensionAppUrl();
+  const appUrl = getRequiredExtensionAppUrl("extension APP_URL sync");
+  const syncedAt = new Date().toISOString();
+  const appUrlModule = `export const APP_URL = ${JSON.stringify(appUrl)};\n`;
+  const syncState =
+    JSON.stringify(
+      {
+        appUrl,
+        source: resolution.source,
+        syncedAt,
+      },
+      null,
+      2
+    ) + "\n";
 
-const appUrlChanged = writeFileIfChanged(extensionAppUrlPath, appUrlModule);
-writeFileIfChanged(syncStatePath, syncState);
+  const shopifyGeneratedChanged = writeFileIfChanged(
+    extensionAppUrlPath,
+    appUrlModule
+  );
+  const extensionSourceChanged = writeFileIfChanged(
+    extensionSourceAppUrlPath,
+    appUrlModule
+  );
+  writeFileIfChanged(syncStatePath, syncState);
 
-console.log(
-  `[public-app-url] synced extension APP_URL=${appUrl} source=${
-    resolution.source || "unknown"
-  } changed=${appUrlChanged ? "yes" : "no"} at=${syncedAt}`
-);
+  return {
+    appUrl,
+    source: resolution.source || "unknown",
+    syncedAt,
+    changed: shopifyGeneratedChanged || extensionSourceChanged,
+  };
+}
+
+const isMainModule =
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isMainModule) {
+  const result = syncAppUrl();
+
+  console.log(
+    `[public-app-url] synced extension APP_URL=${result.appUrl} source=${
+      result.source
+    } changed=${result.changed ? "yes" : "no"} at=${result.syncedAt}`
+  );
+}

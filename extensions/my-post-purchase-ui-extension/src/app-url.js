@@ -1,1 +1,1 @@
-export const APP_URL = "https://post-purchase.benjmeyer02.workers.dev";
+export { APP_URL } from "./generated/app-url.js";

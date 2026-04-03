@@ -2,16 +2,23 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   getPublicAppUrlSyncState,
-  getRequiredPublicAppUrl,
-  resolvePublicAppUrl,
+  getRequiredExtensionAppUrl,
+  resolveExtensionAppUrl,
 } from "../app/config.server.js";
 
 const cwd = process.cwd();
 const extensionAppUrlPath = path.join(
   cwd,
+  ".shopify",
+  "generated",
+  "app-url.js"
+);
+const extensionSourceAppUrlPath = path.join(
+  cwd,
   "extensions",
   "my-post-purchase-ui-extension",
   "src",
+  "generated",
   "app-url.js"
 );
 const extensionDistPath = path.join(
@@ -47,11 +54,13 @@ function collectForbiddenMatches(filePath) {
   return forbiddenTokens.filter((token) => contents.includes(token));
 }
 
-const resolution = resolvePublicAppUrl();
-const appUrl = getRequiredPublicAppUrl("public URL validation");
+const resolution = resolveExtensionAppUrl();
+const appUrl = getRequiredExtensionAppUrl("public URL validation");
 const syncState = getPublicAppUrlSyncState();
 const extensionAppUrlSource = readTextFile(extensionAppUrlPath);
 const extensionAppUrl = extractAppUrl(extensionAppUrlSource);
+const extensionSourceAppUrlSource = readTextFile(extensionSourceAppUrlPath);
+const extensionSourceAppUrl = extractAppUrl(extensionSourceAppUrlSource);
 const errors = [];
 
 if (
@@ -71,6 +80,14 @@ if (extensionAppUrl !== appUrl) {
   );
 }
 
+if (extensionSourceAppUrl !== appUrl) {
+  errors.push(
+    `Extension source APP_URL mismatch. Expected ${appUrl}, found ${
+      extensionSourceAppUrl || "missing"
+    } in ${extensionSourceAppUrlPath}.`
+  );
+}
+
 if (!syncState) {
   errors.push(
     "Missing .shopify/public-url-sync.json. Run npm run sync:app-url."
@@ -83,7 +100,7 @@ if (!syncState) {
   }
 }
 
-const filesToCheck = [extensionAppUrlPath];
+const filesToCheck = [extensionAppUrlPath, extensionSourceAppUrlPath];
 
 if (includeBuiltArtifacts) {
   filesToCheck.push(extensionDistPath);
